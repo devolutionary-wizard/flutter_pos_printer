@@ -1,10 +1,14 @@
 import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Image;
 import 'package:flutter_pos_printer/bluetooth_printer.dart';
+import 'package:flutter_pos_printer/screen/home_sreen.dart';
 import 'package:flutter_pos_printer_platform/flutter_pos_printer_platform.dart';
+import 'package:screenshot/screenshot.dart';
+import 'package:image/image.dart';
 
 class Printer extends StatefulWidget {
   const Printer({Key? key}) : super(key: key);
@@ -35,8 +39,17 @@ class _PrinterState extends State<Printer> {
   final _portController = TextEditingController();
   BluetoothPrinter? selectedPrinter;
 
+  final ScreenshotController _scrollController = ScreenshotController();
+  Uint8List? theimageThatComesfromThePrinter;
+  String dir = Directory.current.path;
+
   @override
   void initState() {
+    _scrollController
+        .capture(delay: const Duration(microseconds: 10))
+        .then((value) async {
+      theimageThatComesfromThePrinter = value!;
+    });
     if (Platform.isWindows) defaultPrinterType = PrinterType.usb;
     super.initState();
     _portController.text = _port;
@@ -157,12 +170,14 @@ class _PrinterState extends State<Printer> {
   Future _printReceiveTest() async {
     List<int> bytes = [];
 
+    final Image? image = decodeImage(theimageThatComesfromThePrinter!);
     final profile = await CapabilityProfile.load();
     final generator = Generator(PaperSize.mm80, profile);
     bytes += generator.setGlobalCodeTable('CP1252');
     bytes += generator.text('Test Print',
         styles: const PosStyles(align: PosAlign.center));
     bytes += generator.text('Product 1');
+    bytes += generator.image(image!, align: PosAlign.center);
     bytes += generator.text('Product 2');
     debugPrint('==' * 10);
     debugPrint("it's working");
@@ -189,6 +204,7 @@ class _PrinterState extends State<Printer> {
         pendingTask = null;
         break;
       case PrinterType.bluetooth:
+        bytes += generator.qrcode('testing');
         bytes += generator.cut();
         await printerManager.connect(
             type: bluetoothPrinter.typePrinter,
@@ -493,7 +509,12 @@ class _PrinterState extends State<Printer> {
                         ),
                       ),
                     ),
-                  )
+                  ),
+                  const SizedBox(
+                    height: 30,
+                  ),
+                  Screenshot(
+                      controller: _scrollController, child: const HomeSreen())
                 ],
               ),
             ),
