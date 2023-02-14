@@ -8,6 +8,7 @@ import 'package:flutter_pos_printer/bluetooth_printer.dart';
 import 'package:flutter_pos_printer/screen/home_sreen.dart';
 import 'package:flutter_pos_printer_platform/flutter_pos_printer_platform.dart';
 import 'package:screenshot/screenshot.dart';
+import 'package:flutter_pos_printer/print_util.dart';
 import 'package:image/image.dart';
 
 class Printer extends StatefulWidget {
@@ -29,6 +30,7 @@ class _PrinterState extends State<Printer> {
   StreamSubscription<BTStatus>? _subscriptionBtStatus;
   StreamSubscription<USBStatus>? _subscriptionUsbStatus;
   BTStatus _currentStatus = BTStatus.none;
+
   // _currentUsbStatus is only supports on Android
   // ignore: unused_field
   USBStatus _currentUsbStatus = USBStatus.none;
@@ -169,6 +171,16 @@ class _PrinterState extends State<Printer> {
 
   Future _printReceiveTest() async {
     List<int> bytes = [];
+    List<Image> imgList = [];
+    Uint8List imageInt =
+        await PrintUtils().convertToImage("លេខសំបុត្រ :  123455\n"
+            "ថ្ងៃទី : ១២ មីថុនា ២០២២\n"
+            "សរុប : 1000៛");
+    final Image? receipt = decodeImage(imageInt);
+    for (var i = 0; i <= receipt!.height; i += 200) {
+      Image cropedReceiptImg = copyCrop(receipt, 0, i, 470, 200);
+      imgList.add(cropedReceiptImg);
+    }
 
     final Image? image = decodeImage(theimageThatComesfromThePrinter!);
     final profile = await CapabilityProfile.load();
@@ -176,6 +188,9 @@ class _PrinterState extends State<Printer> {
     bytes += generator.text('Test Print',
         styles: const PosStyles(align: PosAlign.center));
     bytes += generator.text('Product 1');
+    for (var element in imgList) {
+      bytes += generator.image(element!);
+    }
     bytes += generator.image(image!, align: PosAlign.center);
     bytes += generator.text('Product 2');
     bytes += generator.qrcode('testing');
