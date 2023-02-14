@@ -39,13 +39,13 @@ class _PrinterState extends State<Printer> {
   final _portController = TextEditingController();
   BluetoothPrinter? selectedPrinter;
 
-  final ScreenshotController _scrollController = ScreenshotController();
+  final ScreenshotController _screenshotController = ScreenshotController();
   Uint8List? theimageThatComesfromThePrinter;
   String dir = Directory.current.path;
 
   @override
   void initState() {
-    _scrollController
+    _screenshotController
         .capture(delay: const Duration(microseconds: 10))
         .then((value) async {
       theimageThatComesfromThePrinter = value!;
@@ -173,12 +173,13 @@ class _PrinterState extends State<Printer> {
     final Image? image = decodeImage(theimageThatComesfromThePrinter!);
     final profile = await CapabilityProfile.load();
     final generator = Generator(PaperSize.mm80, profile);
-    bytes += generator.setGlobalCodeTable('CP1252');
     bytes += generator.text('Test Print',
         styles: const PosStyles(align: PosAlign.center));
     bytes += generator.text('Product 1');
     bytes += generator.image(image!, align: PosAlign.center);
     bytes += generator.text('Product 2');
+    bytes += generator.qrcode('testing');
+
     debugPrint('==' * 10);
     debugPrint("it's working");
     debugPrint('$bytes');
@@ -204,7 +205,6 @@ class _PrinterState extends State<Printer> {
         pendingTask = null;
         break;
       case PrinterType.bluetooth:
-        bytes += generator.qrcode('testing');
         bytes += generator.cut();
         await printerManager.connect(
             type: bluetoothPrinter.typePrinter,
@@ -514,7 +514,8 @@ class _PrinterState extends State<Printer> {
                     height: 30,
                   ),
                   Screenshot(
-                      controller: _scrollController, child: const HomeSreen())
+                      controller: _screenshotController,
+                      child: const HomeSreen())
                 ],
               ),
             ),
